@@ -18,7 +18,7 @@ const QUERY_GET_ALL_POKEMONS = gql`
       pokemon(
         where: {id: {_lt: 151}}
         order_by: {id: asc}
-        limit: 42
+        limit: 40
       ) {
         name
         id
