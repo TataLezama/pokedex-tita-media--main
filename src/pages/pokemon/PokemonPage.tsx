@@ -2,8 +2,44 @@ import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { useParams } from "react-router";
 
+type POKEMONS = {
+  pokemon: Array<Pokemon>
+}
+
+type Pokemon = {
+  name: string;
+  id: number;
+  weight: number;
+  height: number;
+  pokemontypes: Array<any>;
+  pokemonstats: Array<any>;
+  pokemonmoves: Array<any>;
+  pokemonsprites: Array<any>;
+}
+
+type POKEMON_COLOR = {
+  pokemoncolor: Array<any>;
+}
+
 export const PokemonPage = () => {
   const { id } = useParams();
+
+  const QUERY_GET_POKEMON_COLOR_BY_ID = gql`
+      query getPokemonColorById {
+        pokemoncolor (
+          where: {
+            pokemonspecies:  {
+                id:  {
+                  _eq: ${Number(id)}
+                }
+            }
+          } limit: 1
+        ){
+          id
+          name
+        }
+      }
+  `;
 
   const QUERY_GET_POKEMON_BY_ID = gql`
       query getAllPokemons {
@@ -37,10 +73,14 @@ export const PokemonPage = () => {
       }
   `;
 
-  const { data, loading, error } = useQuery(QUERY_GET_POKEMON_BY_ID);
+  const { data: pokemonData, loading: pokemonLoading, error: pokemonError } = useQuery<POKEMONS>(QUERY_GET_POKEMON_BY_ID);
+  const { data: pokemonColorData, loading: pokemonColorLoading, error: pokemonColorError } = useQuery<POKEMON_COLOR>(QUERY_GET_POKEMON_COLOR_BY_ID);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error :(</p>;
+  if (pokemonLoading) return <p>Loading...</p>;
+  if (pokemonError) return <p>Error :(</p>;
+
+  if (pokemonColorLoading) return <p>Loading...</p>;
+  if (pokemonColorError) return <p>Error :(</p>;
 
   let nextPokemon:number = 0;
   let previousPokemon:number = 0;
@@ -52,21 +92,28 @@ export const PokemonPage = () => {
     previousPokemon = 0
   }
 
-  console.log(data);
-
+  console.log(pokemonColorData?.pokemoncolor[0].name);
   return (
     <>
-      <div className="pokemon">
+      {
+        pokemonData && pokemonData.pokemon &&
+        <div className="pokemon" 
+        style={
+          pokemonColorData && pokemonColorData.pokemoncolor && 
+          pokemonColorData.pokemoncolor[0].name !== ''
+              ? { backgroundColor: `${pokemonColorData.pokemoncolor[0].name}` } 
+              : { backgroundColor: "#DC0A2D" }
+        } >
         <img className="pokemon__img-shadow" src="/assets/images/pokeball.svg" alt="Pokeball" />
         <div className="pokemon__header">
           <a href="/">
             <img src="/assets/images/arrow_back.svg" alt="arrow back" />
           </a>
-          <h1>{data.pokemon[0].name}</h1>
-          <span className="pokemon__id">#{data.pokemon[0].id > 9 ? `0${data.pokemon[0].id}` : `00${data.pokemon[0].id}`}</span>
+          <h1>{pokemonData.pokemon[0].name}</h1>
+          <span className="pokemon__id">#{pokemonData.pokemon[0].id > 9 ? `0${pokemonData.pokemon[0].id}` : `00${pokemonData.pokemon[0].id}`}</span>
         </div>
         <div className="pokemon__image">
-          <img src={data.pokemon[0].pokemonsprites[0].sprites.front_default} alt={data.pokemon[0].name} />
+          <img src={pokemonData.pokemon[0].pokemonsprites[0].sprites.front_default} alt={pokemonData.pokemon[0].name} />
           <a
               className={ previousPokemon !== 0 ? "arrow pokemon__button-previous" : "arrow pokemon__button-previous disabled" }
               href={`/pokemon/${previousPokemon}`}
@@ -81,29 +128,32 @@ export const PokemonPage = () => {
           <div className="pokemon__types">
             <ul>
               {
-                data.pokemon[0].pokemontypes.map((type, index) => (
-                  <li key={index}>{type.type.name}</li>
+                pokemonData.pokemon[0].pokemontypes.map((type, index) => (
+                  <li key={index} data-id={type.type.id}>{type.type.name}</li>
                 ))
               }
             </ul>
           </div>
-          <h2>About</h2>
+          <h2 style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+              color: pokemonColorData.pokemoncolor[0].name} : {
+                color: "#DC0A2D"
+              }}>About</h2>
           <div className="pokemon__about">
             <ul>
               <li>
                 <div>
-                  <img src="/assets/images/weight.svg" alt="Weight" />{data.pokemon[0].weight} kg
+                  <img src="/assets/images/weight.svg" alt="Weight" />{pokemonData.pokemon[0].weight} kg
                 </div>
                 <small>Weight</small>
                 </li>
               <li>
-                <img src="/assets/images/straighten.svg" alt="Height" />{data.pokemon[0].height} m
+                <img src="/assets/images/straighten.svg" alt="Height" />{pokemonData.pokemon[0].height} m
                 <small>Height</small>
               </li>
               <li>
                 <ul>
                   {
-                    data.pokemon[0].pokemonmoves.map((move, index) => (
+                    pokemonData.pokemon[0].pokemonmoves.map((move, index) => (
                       <li key={index}>{move.move.name}</li>
                     ))
                   }
@@ -115,55 +165,113 @@ export const PokemonPage = () => {
           <div className="pokemon__description">
             <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
           </div>
-          <h2>Base Stats</h2>
+          <h2 style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+              color: pokemonColorData.pokemoncolor[0].name} : {
+                color: "#DC0A2D"
+              }}>Base Stats</h2>
           <div className="pokemon__stats">
             <ul className="stats">
               <li className="stat">
-                <span className="stat__title">HP</span>
-                <span className="stat__value">{data.pokemon[0].pokemonstats[0].base_stat}</span>
+                <span className="stat__title"
+                style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      color: pokemonColorData.pokemoncolor[0].name} : {
+                        color: "#DC0A2D"
+                      }}>HP</span>
+                <span className="stat__value">{pokemonData.pokemon[0].pokemonstats[0].base_stat}</span>
                 <span className="stat__bar">
-                  <span style={{ width: `${data.pokemon[0].pokemonstats[0].base_stat}%` }}></span>
+                  <span style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      width: `${pokemonData.pokemon[0].pokemonstats[0].base_stat}%`, 
+                      backgroundColor: pokemonColorData.pokemoncolor[0].name} : {
+                        width: `${pokemonData.pokemon[0].pokemonstats[0].base_stat}%`,
+                        backgroundColor: "#DC0A2D"
+                      }}></span>
                 </span>
               </li>
               <li className="stat">
-                <span className="stat__title">ATK</span>
-                <span className="stat__value">{data.pokemon[0].pokemonstats[1].base_stat}</span>
+                <span className="stat__title"
+                style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      color: pokemonColorData.pokemoncolor[0].name} : {
+                        color: "#DC0A2D"
+                      }}>ATK</span>
+                <span className="stat__value">{pokemonData.pokemon[0].pokemonstats[1].base_stat}</span>
                 <span className="stat__bar">
-                  <span style={{ width: `${data.pokemon[0].pokemonstats[1].base_stat}%` }}></span>
+                  <span style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      width: `${pokemonData.pokemon[0].pokemonstats[1].base_stat}%`, 
+                      backgroundColor: pokemonColorData.pokemoncolor[0].name} : {
+                        width: `${pokemonData.pokemon[0].pokemonstats[1].base_stat}%`,
+                        backgroundColor: "#DC0A2D"
+                      }}></span>
                 </span>
               </li>
               <li className="stat">
-                <span className="stat__title">DEF</span>
-                <span className="stat__value">{data.pokemon[0].pokemonstats[2].base_stat}</span>
+                <span className="stat__title"
+                style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      color: pokemonColorData.pokemoncolor[0].name} : {
+                        color: "#DC0A2D"
+                      }}>DEF</span>
+                <span className="stat__value">{pokemonData.pokemon[0].pokemonstats[2].base_stat}</span>
                 <span className="stat__bar">
-                  <span style={{ width: `${data.pokemon[0].pokemonstats[2].base_stat}%` }}></span>
+                  <span style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      width: `${pokemonData.pokemon[0].pokemonstats[2].base_stat}%`, 
+                      backgroundColor: pokemonColorData.pokemoncolor[0].name} : {
+                        width: `${pokemonData.pokemon[0].pokemonstats[2].base_stat}%`,
+                        backgroundColor: "#DC0A2D"
+                      }}></span>
                 </span>
               </li>
               <li className="stat">
-                <span className="stat__title">SATK</span>
-                <span className="stat__value">{data.pokemon[0].pokemonstats[3].base_stat}</span>
+                <span className="stat__title"
+                style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      color: pokemonColorData.pokemoncolor[0].name} : {
+                        color: "#DC0A2D"
+                      }}>SATK</span>
+                <span className="stat__value">{pokemonData.pokemon[0].pokemonstats[3].base_stat}</span>
                 <span className="stat__bar">
-                  <span style={{ width: `${data.pokemon[0].pokemonstats[3].base_stat}%` }}></span>
+                  <span style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      width: `${pokemonData.pokemon[0].pokemonstats[3].base_stat}%`, 
+                      backgroundColor: pokemonColorData.pokemoncolor[0].name} : {
+                        width: `${pokemonData.pokemon[0].pokemonstats[3].base_stat}%`,
+                        backgroundColor: "#DC0A2D"
+                      }}></span>
                 </span>
               </li>
               <li className="stat">
-                <span className="stat__title">SSDEF</span>
-                <span className="stat__value">{data.pokemon[0].pokemonstats[4].base_stat}</span>
+                <span className="stat__title" 
+                style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      color: pokemonColorData.pokemoncolor[0].name} : {
+                        color: "#DC0A2D"
+                      }}>SSDEF</span>
+                <span className="stat__value">{pokemonData.pokemon[0].pokemonstats[4].base_stat}</span>
                 <span className="stat__bar">
-                  <span style={{ width: `${data.pokemon[0].pokemonstats[4].base_stat}%` }}></span>
+                  <span style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      width: `${pokemonData.pokemon[0].pokemonstats[4].base_stat}%`, 
+                      backgroundColor: pokemonColorData.pokemoncolor[0].name} : {
+                        width: `${pokemonData.pokemon[0].pokemonstats[4].base_stat}%`,
+                        backgroundColor: "#DC0A2D"
+                      }}></span>
                 </span>
               </li>
               <li className="stat">
-                <span className="stat__title">SPD</span>
-                <span className="stat__value">{data.pokemon[0].pokemonstats[5].base_stat}</span>
+                <span className="stat__title" 
+                style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      color: pokemonColorData.pokemoncolor[0].name} : {
+                        color: "#DC0A2D"
+                      }}>SPD</span>
+                <span className="stat__value">{pokemonData.pokemon[0].pokemonstats[5].base_stat}</span>
                 <span className="stat__bar">
-                  <span style={{ width: `${data.pokemon[0].pokemonstats[5].base_stat}%` }}></span>
+                  <span style={ pokemonColorData && pokemonColorData.pokemoncolor[0].name != '' ? { 
+                      width: `${pokemonData.pokemon[0].pokemonstats[5].base_stat}%`, 
+                      backgroundColor: pokemonColorData.pokemoncolor[0].name} : {
+                        width: `${pokemonData.pokemon[0].pokemonstats[5].base_stat}%`,
+                        backgroundColor: "#DC0A2D"
+                      }}></span>
                 </span>
                 </li>
             </ul>
           </div>
         </div>
       </div>
+      }
     </>
   )
 }
